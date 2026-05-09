@@ -238,19 +238,42 @@ header > span:first-child {
 
 /* Intro Panel */
 #panel-intro { animation: cardFadeIn 380ms ease both; }
-#youtube-player-container { position: relative; width: 100%; padding-bottom: 56.25%; background: #000; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 18px; border: 1px solid var(--color-border); box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
-#youtube-player { position: absolute; inset: 0; width: 100%; height: 100%; }
-#youtube-player-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
-#video-cover {
-  position: absolute; inset: 0; z-index: 10;
-  background: linear-gradient(160deg, #1a1008 0%, #261a0d 100%);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+#audio-player {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  pointer-events: none;
+  padding: 24px 20px 18px;
+  margin-bottom: 18px;
+  text-align: center;
 }
-#video-cover .cover-icon { font-size: 3rem; animation: pulse 1.8s ease infinite; }
-#video-cover .cover-text { font-family: var(--font-heading); font-size: 1rem; color: var(--color-text-muted); letter-spacing: 0.06em; }
-#video-cover.hidden { display: none !important; }
+#audio-visualizer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 52px;
+  margin-bottom: 12px;
+}
+@keyframes eq1 { 0%,100%{height:6px} 50%{height:44px} }
+@keyframes eq2 { 0%,100%{height:14px} 50%{height:32px} }
+@keyframes eq3 { 0%,100%{height:24px} 50%{height:8px} }
+.eq-bar {
+  width: 7px;
+  background: var(--color-border);
+  border-radius: 4px;
+  height: 6px;
+  transition: background 0.3s;
+}
+#audio-visualizer.playing .eq-bar { background: var(--color-amber); }
+#audio-visualizer.playing .eq-bar:nth-child(1) { animation: eq1 0.7s ease infinite 0.0s; }
+#audio-visualizer.playing .eq-bar:nth-child(2) { animation: eq2 0.7s ease infinite 0.1s; }
+#audio-visualizer.playing .eq-bar:nth-child(3) { animation: eq1 0.7s ease infinite 0.2s; }
+#audio-visualizer.playing .eq-bar:nth-child(4) { animation: eq3 0.7s ease infinite 0.05s; }
+#audio-visualizer.playing .eq-bar:nth-child(5) { animation: eq1 0.7s ease infinite 0.15s; }
+#audio-visualizer.playing .eq-bar:nth-child(6) { animation: eq2 0.7s ease infinite 0.25s; }
+#audio-visualizer.playing .eq-bar:nth-child(7) { animation: eq3 0.7s ease infinite 0.1s; }
+#audio-visualizer.playing .eq-bar:nth-child(8) { animation: eq1 0.7s ease infinite 0.2s; }
+#audio-status { font-size: 0.85rem; color: var(--color-text-muted); letter-spacing: 0.03em; }
 #intro-hint { background: var(--color-surface-2); border: 1px dashed var(--color-border-light); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 14px; }
 #intro-hint::before { content: '💡 '; }
 #intro-controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -390,12 +413,14 @@ header > span:first-child {
       <button class="genre-btn" data-genre="classic-rock">🤘 クラシックロック</button>
     </div>
     <div id="intro-card">
-      <div id="youtube-player-container">
-        <div id="youtube-player"></div>
-        <div id="video-cover">
-          <span class="cover-icon">🎵</span>
-          <span class="cover-text">曲名・アーティストを当てよう</span>
+      <div id="audio-player">
+        <audio id="quiz-audio" preload="auto"></audio>
+        <div id="audio-visualizer">
+          <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+          <span class="eq-bar"></span><span class="eq-bar"></span><span class="eq-bar"></span>
+          <span class="eq-bar"></span><span class="eq-bar"></span>
         </div>
+        <p id="audio-status">🎵 曲名・アーティストを当てよう</p>
       </div>
       <div id="intro-hint" class="hidden"></div>
       <div id="intro-controls">
@@ -428,10 +453,6 @@ header > span:first-child {
       Groq API Key
       <input id="input-groq-key" type="password" placeholder="gsk_..." autocomplete="off">
     </label>
-    <label>
-      YouTube API Key
-      <input id="input-youtube-key" type="password" placeholder="AIza..." autocomplete="off">
-    </label>
     <div class="modal-actions">
       <button id="btn-save-keys">保存</button>
       <button id="btn-close-settings">閉じる</button>
@@ -445,21 +466,17 @@ header > span:first-child {
 // ============================================================
 const CONFIG = {
   groqKey: '',
-  youtubeKey: '',
   model: 'llama-3.1-8b-instant'
 };
 CONFIG.load = function() {
   try {
     const injectedGroq = '__GROQ_KEY__';
-    const injectedYT   = '__YOUTUBE_KEY__';
-    this.groqKey    = (injectedGroq.startsWith('__') ? '' : injectedGroq) || localStorage.getItem('pubquiz_groq_key')    || '';
-    this.youtubeKey = (injectedYT.startsWith('__')   ? '' : injectedYT)   || localStorage.getItem('pubquiz_youtube_key') || '';
+    this.groqKey = (injectedGroq.startsWith('__') ? '' : injectedGroq) || localStorage.getItem('pubquiz_groq_key') || '';
   } catch (e) {}
 };
 CONFIG.save = function() {
   try {
-    localStorage.setItem('pubquiz_groq_key',    this.groqKey);
-    localStorage.setItem('pubquiz_youtube_key', this.youtubeKey);
+    localStorage.setItem('pubquiz_groq_key', this.groqKey);
   } catch (e) {}
 };
 
@@ -690,64 +707,76 @@ const GENRE_MAP = {
   'classic-rock':        'Classic Rock',
 };
 
-const YOUTUBE = {
+const MUSIC = {
   _timer: null,
 
-  init: function() {},
+  init: function() {
+    const audio = document.getElementById('quiz-audio');
+    audio.addEventListener('ended', function() {
+      MUSIC._setPlaying(false);
+    });
+  },
+
+  _setPlaying: function(playing) {
+    const vis = document.getElementById('audio-visualizer');
+    const status = document.getElementById('audio-status');
+    if (playing) {
+      vis.classList.add('playing');
+      status.textContent = '🎵 再生中... 曲名・アーティストを当てよう';
+    } else {
+      vis.classList.remove('playing');
+      status.textContent = '⏸ 再生終了 — 回答してください';
+    }
+  },
 
   search: async function(artist, title) {
     try {
-      const q = encodeURIComponent(artist + ' ' + title + ' official');
-      const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + q + '&type=video&videoEmbeddable=true&maxResults=3&key=' + CONFIG.youtubeKey;
-      console.log('[YouTube] Searching:', artist, '-', title);
+      const term = encodeURIComponent(artist + ' ' + title);
+      const url = 'https://itunes.apple.com/search?term=' + term + '&media=music&entity=song&limit=5';
       const res = await fetch(url);
       const data = await res.json();
-      console.log('[YouTube] Response:', JSON.stringify(data).slice(0, 300));
-      if (!res.ok) {
-        const msg = data.error ? data.error.message : 'HTTP ' + res.status;
-        throw new Error(msg);
-      }
-      if (!data.items || data.items.length === 0) throw new Error('No results');
-      const videoId = data.items[0].id.videoId;
-      console.log('[YouTube] videoId:', videoId);
-      return videoId;
+      const item = data.results.find(function(r) { return r.previewUrl; });
+      if (!item) throw new Error('No preview found');
+      return item.previewUrl;
     } catch (err) {
-      console.error('[YouTube] search failed:', err);
-      UI.showError('YouTube検索エラー: ' + err.message);
+      console.error('[MUSIC] search failed:', err);
+      UI.showError('楽曲プレビューの取得に失敗しました: ' + err.message);
       return null;
     }
   },
 
-  playFor: function(videoId, seconds) {
-    const container = document.getElementById('youtube-player-container');
-    let iframe = document.getElementById('yt-iframe');
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'yt-iframe';
-      iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
-      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; compute-pressure';
-      iframe.allowFullscreen = true;
-      container.appendChild(iframe);
-    }
-    iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&rel=0&modestbranding=1';
-
+  playFor: function(previewUrl, seconds) {
+    if (!previewUrl) return;
+    const audio = document.getElementById('quiz-audio');
+    audio.src = previewUrl;
+    audio.currentTime = 0;
+    audio.play().catch(function(e) { console.warn('Autoplay:', e); });
+    MUSIC._setPlaying(true);
     if (this._timer) clearTimeout(this._timer);
     this._timer = setTimeout(function() {
-      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=0&controls=0&rel=0&modestbranding=1';
+      audio.pause();
+      MUSIC._setPlaying(false);
     }, seconds * 1000);
   },
 
   replay: function() {
-    if (STATE.currentIntro && STATE.currentIntro.videoId) {
-      YOUTUBE.playFor(STATE.currentIntro.videoId, 10);
+    if (STATE.currentIntro && STATE.currentIntro.previewUrl) {
+      MUSIC.playFor(STATE.currentIntro.previewUrl, 10);
     }
+  },
+
+  stop: function() {
+    const audio = document.getElementById('quiz-audio');
+    audio.pause();
+    audio.currentTime = 0;
+    if (this._timer) clearTimeout(this._timer);
+    MUSIC._setPlaying(false);
   },
 };
 
 const INTRO = {
   generate: async function() {
     if (!CONFIG.groqKey) { UI.showError('Groq APIキーを設定してください。'); return; }
-    if (!CONFIG.youtubeKey)   { UI.showError('YouTube APIキーを設定してください。'); return; }
     UI.showLoading(true);
 
     try {
@@ -770,14 +799,14 @@ const INTRO = {
       const song = JSON.parse(json.choices[0].message.content.trim());
       const { artist, title, year, hint } = song;
 
-      const videoId = await YOUTUBE.search(artist, title);
-      STATE.currentIntro = { artist, title, year, hint, videoId };
+      const previewUrl = await MUSIC.search(artist, title);
+      STATE.currentIntro = { artist, title, year, hint, previewUrl };
       UI.showLoading(false);
 
-      if (!videoId) {
-        UI.showError('YouTube動画が見つかりませんでした。');
+      if (!previewUrl) {
+        UI.showError('楽曲プレビューが見つかりませんでした。');
       } else {
-        YOUTUBE.playFor(videoId, 10);
+        MUSIC.playFor(previewUrl, 10);
       }
 
       const elHint = document.getElementById('intro-hint');
@@ -790,7 +819,6 @@ const INTRO = {
       document.getElementById('intro-result').className = 'hidden';
       document.getElementById('btn-next-intro').classList.add('hidden');
       document.getElementById('intro-user-answer').value = '';
-      document.getElementById('video-cover').classList.remove('hidden');
     } catch (err) {
       UI.showLoading(false);
       console.error('INTRO.generate:', err);
@@ -798,7 +826,7 @@ const INTRO = {
     }
   },
 
-  replay: function() { YOUTUBE.replay(); },
+  replay: function() { MUSIC.replay(); },
 
   showAnswer: function() {
     if (!STATE.currentIntro) return;
@@ -841,8 +869,6 @@ const INTRO = {
       el.innerHTML = '<p class="' + (correct ? 'correct-text' : 'wrong-text') + '">' + (correct ? '✓ 正解!' : '✗ 不正解') + '</p><p>' + explanation + '</p>';
       el.classList.remove('hidden');
       document.getElementById('btn-next-intro').classList.remove('hidden');
-      document.getElementById('video-cover').classList.add('hidden');
-
       updateScores(correct);
       addToHistory('イントロクイズ', artist + ' - ' + title, correct);
       UI.updateScoreBar();
@@ -862,7 +888,6 @@ function setupEventListeners() {
   // Settings modal
   document.getElementById('btn-settings').addEventListener('click', () => {
     document.getElementById('input-groq-key').value = CONFIG.groqKey;
-    document.getElementById('input-youtube-key').value   = CONFIG.youtubeKey;
     document.getElementById('settings-modal').classList.remove('hidden');
   });
   document.getElementById('btn-close-settings').addEventListener('click', () => {
@@ -873,8 +898,7 @@ function setupEventListeners() {
   });
   document.getElementById('btn-save-keys').addEventListener('click', () => {
     const ak = document.getElementById('input-groq-key').value.trim();
-    const yk = document.getElementById('input-youtube-key').value.trim();
-    STORAGE.saveKeys(ak, yk);
+    STORAGE.saveKeys(ak);
     document.getElementById('settings-modal').classList.add('hidden');
     if (STATE.currentMode === 'quiz' && !STATE.currentQuiz) QUIZ.generate();
   });
@@ -960,7 +984,7 @@ function init() {
   UI.updateScoreBar();
   UI.renderHistory();
   setupEventListeners();
-  YOUTUBE.init();
+  MUSIC.init();
 
   if (!CONFIG.groqKey) {
     document.getElementById('settings-modal').classList.remove('hidden');
