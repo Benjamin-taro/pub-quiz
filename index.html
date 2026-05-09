@@ -450,8 +450,10 @@ const CONFIG = {
 };
 CONFIG.load = function() {
   try {
-    this.groqKey    = localStorage.getItem('pubquiz_groq_key')    || '';
-    this.youtubeKey = localStorage.getItem('pubquiz_youtube_key') || '';
+    const injectedGroq = '__GROQ_KEY__';
+    const injectedYT   = '__YOUTUBE_KEY__';
+    this.groqKey    = (injectedGroq.startsWith('__') ? '' : injectedGroq) || localStorage.getItem('pubquiz_groq_key')    || '';
+    this.youtubeKey = (injectedYT.startsWith('__')   ? '' : injectedYT)   || localStorage.getItem('pubquiz_youtube_key') || '';
   } catch (e) {}
 };
 CONFIG.save = function() {
