@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍺 Pub Quiz Trainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --color-bg:           #1a1008;
+  --color-surface:      #261a0d;
+  --color-surface-2:    #322010;
+  --color-surface-3:    #3e2a14;
+  --color-amber:        #d97706;
+  --color-amber-light:  #f59e0b;
+  --color-gold:         #b8860b;
+  --color-gold-light:   #fbbf24;
+  --color-text:         #f5e6c8;
+  --color-text-muted:   #a8926e;
+  --color-text-dim:     #7a6248;
+  --color-correct:      #16a34a;
+  --color-correct-bg:   #14532d;
+  --color-wrong:        #dc2626;
+  --color-wrong-bg:     #7f1d1d;
+  --color-border:       #4a3520;
+  --color-border-light: #5c4530;
+  --radius-sm:          6px;
+  --radius-md:          10px;
+  --radius-lg:          16px;
+  --shadow-card:        0 4px 24px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
+  --shadow-glow:        0 0 20px rgba(217,119,6,0.25);
+  --transition-fast:    150ms ease;
+  --transition-mid:     260ms ease;
+  --font-heading:       'Playfair Display', Georgia, serif;
+  --font-body:          'Source Sans 3', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  line-height: 1.6;
+  background-image:
+    repeating-linear-gradient(92deg, transparent, transparent 120px, rgba(255,255,255,0.012) 120px, rgba(255,255,255,0.012) 121px),
+    repeating-linear-gradient(180deg, transparent, transparent 60px, rgba(0,0,0,0.08) 60px, rgba(0,0,0,0.08) 61px);
+}
+
+button { font-family: var(--font-body); cursor: pointer; border: none; outline: none; transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast); }
+input  { font-family: var(--font-body); outline: none; }
+
+.hidden { display: none !important; }
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+/* Header */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 16px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+header > span:first-child {
+  font-family: var(--font-heading);
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 900;
+  color: var(--color-gold-light);
+  text-shadow: 0 2px 8px rgba(217,119,6,0.4);
+  flex: 1 1 auto;
+}
+#btn-settings {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+#btn-settings:hover { background: var(--color-surface-3); color: var(--color-text); border-color: var(--color-amber); box-shadow: 0 0 8px rgba(217,119,6,0.3); }
+#btn-settings:active { transform: scale(0.97); }
+
+/* Score Bar */
+#score-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+.score-item { display: flex; align-items: baseline; gap: 4px; flex: 1 1 80px; min-width: 80px; }
+.score-label { font-size: 0.72rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.score-value { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--color-gold-light); }
+.score-divider { width: 1px; height: 28px; background: var(--color-border); flex-shrink: 0; }
+#score-bar .spacer { flex: 1 1 0; }
+#btn-reset { padding: 6px 14px; background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 600; flex-shrink: 0; }
+#btn-reset:hover { background: var(--color-wrong-bg); color: #fca5a5; border-color: var(--color-wrong); }
+
+/* Mode Tabs */
+#mode-tabs { display: flex; gap: 4px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 4px; margin-bottom: 16px; }
+.tab { flex: 1; padding: 9px 16px; background: transparent; color: var(--color-text-muted); border-radius: calc(var(--radius-md) - 2px); font-size: 0.92rem; font-weight: 600; transition: background var(--transition-mid), color var(--transition-mid), box-shadow var(--transition-mid); }
+.tab:hover:not(.active) { background: var(--color-surface-2); color: var(--color-text); }
+.tab.active { background: var(--color-amber); color: #1a1008; box-shadow: 0 2px 12px rgba(217,119,6,0.5); font-weight: 700; }
+
+/* Category / Genre Buttons */
+#quiz-categories, #intro-genres { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.category-btn, .genre-btn {
+  padding: 6px 14px;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.category-btn:hover, .genre-btn:hover { background: var(--color-surface-3); color: var(--color-text); border-color: var(--color-amber); }
+.category-btn.selected, .genre-btn.selected { background: var(--color-amber); color: #1a1008; border-color: var(--color-amber); box-shadow: 0 0 10px rgba(217,119,6,0.4); font-weight: 700; }
+.category-btn:active, .genre-btn:active { transform: scale(0.96); }
+
+/* Quiz / Intro Cards */
+@keyframes cardFadeIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes flashCorrect {
+  0%   { box-shadow: var(--shadow-card); background: var(--color-surface); }
+  30%  { box-shadow: 0 0 40px rgba(22,163,74,0.7); background: var(--color-correct-bg); }
+  100% { box-shadow: var(--shadow-card); background: var(--color-surface); }
+}
+@keyframes flashWrong {
+  0%   { box-shadow: var(--shadow-card); background: var(--color-surface); }
+  30%  { box-shadow: 0 0 40px rgba(220,38,38,0.7); background: var(--color-wrong-bg); }
+  100% { box-shadow: var(--shadow-card); background: var(--color-surface); }
+}
+#quiz-card, #intro-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 28px 24px;
+  box-shadow: var(--shadow-card);
+  animation: cardFadeIn 380ms ease both;
+  position: relative;
+  overflow: hidden;
+}
+#quiz-card::before, #intro-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-amber), var(--color-gold-light), var(--color-amber), transparent);
+}
+#quiz-card.correct { animation: cardFadeIn 380ms ease both, flashCorrect 700ms ease forwards; }
+#quiz-card.wrong   { animation: cardFadeIn 380ms ease both, flashWrong 700ms ease forwards; }
+
+#quiz-category-label {
+  display: inline-block;
+  padding: 3px 12px;
+  background: var(--color-surface-3);
+  border: 1px solid var(--color-border-light);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-amber-light);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+#quiz-question { font-family: var(--font-heading); font-size: clamp(1.1rem, 3vw, 1.45rem); font-weight: 700; color: var(--color-text); line-height: 1.45; margin-bottom: 24px; }
+
+/* Option Buttons */
+#quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.option-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  text-align: left;
+  line-height: 1.4;
+}
+.option-btn:hover:not(:disabled) { background: var(--color-surface-3); border-color: var(--color-amber); box-shadow: 0 0 14px rgba(217,119,6,0.25), inset 0 0 0 1px rgba(217,119,6,0.15); transform: translateY(-1px); }
+.option-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.option-btn:disabled { cursor: default; }
+.option-btn.correct { background: var(--color-correct-bg); border-color: var(--color-correct); color: #bbf7d0; box-shadow: 0 0 12px rgba(22,163,74,0.35); }
+.option-btn.wrong   { background: var(--color-wrong-bg); border-color: var(--color-wrong); color: #fecaca; box-shadow: 0 0 12px rgba(220,38,38,0.35); }
+.option-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; min-width: 26px;
+  background: var(--color-surface-3); border: 1px solid var(--color-border-light); border-radius: 50%;
+  font-size: 0.78rem; font-weight: 700; color: var(--color-amber-light); flex-shrink: 0;
+}
+.option-btn.correct .option-letter { background: var(--color-correct); border-color: var(--color-correct); color: #fff; }
+.option-btn.wrong   .option-letter { background: var(--color-wrong);   border-color: var(--color-wrong);   color: #fff; }
+
+/* Quiz Explanation */
+#quiz-explanation, #intro-result {
+  background: var(--color-surface-2);
+  border-left: 3px solid var(--color-amber);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  margin-bottom: 16px;
+  line-height: 1.55;
+}
+#intro-result.correct { border-left-color: var(--color-correct); background: var(--color-correct-bg); color: #bbf7d0; }
+#intro-result.wrong   { border-left-color: var(--color-wrong);   background: var(--color-wrong-bg);   color: #fecaca; }
+.correct-text { color: #86efac; font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+.wrong-text   { color: #fca5a5; font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+
+/* Action Buttons */
+#btn-next-quiz, #btn-next-intro { display: block; width: 100%; padding: 11px 24px; background: linear-gradient(135deg, var(--color-amber), var(--color-gold)); color: #1a1008; border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.04em; box-shadow: 0 3px 14px rgba(217,119,6,0.4); margin-top: 8px; }
+#btn-next-quiz:hover, #btn-next-intro:hover { background: linear-gradient(135deg, var(--color-amber-light), var(--color-amber)); box-shadow: 0 4px 20px rgba(217,119,6,0.6); transform: translateY(-1px); }
+
+/* Intro Panel */
+#panel-intro { animation: cardFadeIn 380ms ease both; }
+#youtube-player-container { position: relative; width: 100%; padding-bottom: 56.25%; background: #000; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 18px; border: 1px solid var(--color-border); box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+#youtube-player { position: absolute; inset: 0; width: 100%; height: 100%; }
+#youtube-player-container iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+#video-cover {
+  position: absolute; inset: 0; z-index: 10;
+  background: linear-gradient(160deg, #1a1008 0%, #261a0d 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+#video-cover .cover-icon { font-size: 3rem; animation: pulse 1.8s ease infinite; }
+#video-cover .cover-text { font-family: var(--font-heading); font-size: 1rem; color: var(--color-text-muted); letter-spacing: 0.06em; }
+#video-cover.hidden { display: none !important; }
+#intro-hint { background: var(--color-surface-2); border: 1px dashed var(--color-border-light); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 14px; }
+#intro-hint::before { content: '💡 '; }
+#intro-controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+#btn-play-again { flex: 1 1 120px; padding: 11px 24px; background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; }
+#btn-play-again:hover { background: var(--color-surface-3); border-color: var(--color-amber); box-shadow: 0 0 10px rgba(217,119,6,0.25); }
+#btn-show-answer { flex: 1 1 120px; padding: 11px 24px; background: var(--color-surface-3); color: var(--color-amber-light); border: 1px solid var(--color-amber); border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; }
+#btn-show-answer:hover { background: var(--color-amber); color: #1a1008; box-shadow: 0 0 12px rgba(217,119,6,0.4); }
+#intro-answer-form { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+#intro-user-answer { flex: 1 1 180px; padding: 10px 14px; background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+#intro-user-answer::placeholder { color: var(--color-text-dim); }
+#intro-user-answer:focus { border-color: var(--color-amber); box-shadow: 0 0 0 2px rgba(217,119,6,0.2); }
+#btn-submit-intro { padding: 11px 24px; background: linear-gradient(135deg, var(--color-amber), var(--color-gold)); color: #1a1008; border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; box-shadow: 0 2px 10px rgba(217,119,6,0.35); flex-shrink: 0; }
+#btn-submit-intro:hover { background: linear-gradient(135deg, var(--color-amber-light), var(--color-amber)); box-shadow: 0 3px 16px rgba(217,119,6,0.55); transform: translateY(-1px); }
+
+/* Settings Modal */
+.modal { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10,6,2,0.82); backdrop-filter: blur(4px); animation: modalFadeIn 200ms ease both; }
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal.hidden { display: none !important; }
+.modal-content { background: var(--color-surface); border: 1px solid var(--color-border-light); border-radius: var(--radius-lg); padding: 32px 28px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.8), var(--shadow-glow); animation: modalSlideUp 260ms ease both; position: relative; }
+@keyframes modalSlideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-content::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, var(--color-amber), var(--color-gold-light), var(--color-amber), transparent); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.modal-content h2 { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; color: var(--color-gold-light); margin-bottom: 24px; }
+.modal-content label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; font-size: 0.86rem; font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.modal-content label input { width: 100%; padding: 10px 14px; background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.95rem; text-transform: none; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
+.modal-content label input:focus { border-color: var(--color-amber); box-shadow: 0 0 0 2px rgba(217,119,6,0.2); }
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+#btn-save-keys { flex: 1; padding: 11px; background: linear-gradient(135deg, var(--color-amber), var(--color-gold)); color: #1a1008; border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; box-shadow: 0 2px 10px rgba(217,119,6,0.35); }
+#btn-save-keys:hover { background: linear-gradient(135deg, var(--color-amber-light), var(--color-amber)); transform: translateY(-1px); }
+#btn-close-settings { padding: 11px 18px; background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.92rem; font-weight: 600; }
+#btn-close-settings:hover { background: var(--color-surface-2); color: var(--color-text); }
+
+/* Loading & Error */
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 32px; color: var(--color-amber); font-size: 1rem; font-weight: 600; letter-spacing: 0.06em; animation: pulse 1.2s ease infinite; }
+#loading::before { content: ''; display: block; width: 22px; height: 22px; border: 3px solid var(--color-border); border-top-color: var(--color-amber); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+#error-msg { display: flex; align-items: flex-start; gap: 10px; padding: 14px 18px; background: var(--color-wrong-bg); border: 1px solid var(--color-wrong); border-radius: var(--radius-md); color: #fecaca; font-size: 0.92rem; line-height: 1.5; margin-bottom: 16px; }
+#error-msg::before { content: '⚠'; font-size: 1.1em; flex-shrink: 0; }
+
+/* History */
+#history-section { margin-top: 28px; border-top: 1px solid var(--color-border); padding-top: 20px; }
+#history-section h3 { font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700; color: var(--color-text-muted); letter-spacing: 0.04em; margin-bottom: 12px; text-transform: uppercase; }
+#history-list { display: flex; flex-direction: column; gap: 6px; }
+.history-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--color-text-muted); animation: cardFadeIn 280ms ease both; }
+.history-item:hover { background: var(--color-surface-2); }
+.history-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; }
+.history-badge.correct { background: var(--color-correct); color: #fff; }
+.history-badge.wrong   { background: var(--color-wrong);   color: #fff; }
+.history-question { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--color-text); }
+.history-category { font-size: 0.72rem; color: var(--color-text-dim); flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Responsive */
+@media (max-width: 540px) { #quiz-options { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  #app { padding: 0 12px 40px; }
+  .score-divider { display: none; }
+  #quiz-card, #intro-card { padding: 20px 16px 18px; }
+  #intro-answer-form { flex-direction: column; }
+  #btn-submit-intro { width: 100%; }
+  .modal-content { padding: 24px 18px; }
+  .modal-actions { flex-direction: column; }
+}
+@media (max-width: 400px) {
+  .score-value { font-size: 1.1rem; }
+  .tab { font-size: 0.82rem; padding: 8px 10px; }
+}
+  </style>
+</head>
+<body>
+
+<div id="app">
+
+  <header>
+    <span>🍺 Pub Quiz Trainer</span>
+    <button id="btn-settings">⚙ Settings</button>
+  </header>
+
+  <div id="score-bar">
+    <div class="score-item">
+      <span class="score-label">正解数</span>
+      <span class="score-value" id="score-correct">0</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-item">
+      <span class="score-label">正解率</span>
+      <span class="score-value" id="score-rate">—</span>
+    </div>
+    <div class="score-divider"></div>
+    <div class="score-item">
+      <span class="score-label">連続正解</span>
+      <span class="score-value" id="score-streak">0</span>
+    </div>
+    <div class="spacer"></div>
+    <button id="btn-reset">Reset</button>
+  </div>
+
+  <div id="mode-tabs">
+    <button id="tab-quiz" class="tab active">通常クイズ</button>
+    <button id="tab-intro" class="tab">イントロクイズ</button>
+  </div>
+
+  <!-- 通常クイズ -->
+  <div id="panel-quiz">
+    <div id="quiz-categories">
+      <button class="category-btn selected" data-cat="random">🎲 ランダム</button>
+      <button class="category-btn" data-cat="history">🏛 歴史</button>
+      <button class="category-btn" data-cat="sports">⚽ スポーツ</button>
+      <button class="category-btn" data-cat="music">🎵 音楽</button>
+      <button class="category-btn" data-cat="geography">🌍 地理</button>
+      <button class="category-btn" data-cat="science">🔬 科学</button>
+      <button class="category-btn" data-cat="film-tv">🎬 映画TV</button>
+      <button class="category-btn" data-cat="royals">👑 王室</button>
+      <button class="category-btn" data-cat="culture">🎭 文化</button>
+    </div>
+    <div id="quiz-card">
+      <div id="quiz-category-label">カテゴリ</div>
+      <div id="quiz-question">APIキーを設定してスタートしてください。</div>
+      <div id="quiz-options">
+        <button class="option-btn" data-index="0"><span class="option-letter">A</span><span class="option-text">—</span></button>
+        <button class="option-btn" data-index="1"><span class="option-letter">B</span><span class="option-text">—</span></button>
+        <button class="option-btn" data-index="2"><span class="option-letter">C</span><span class="option-text">—</span></button>
+        <button class="option-btn" data-index="3"><span class="option-letter">D</span><span class="option-text">—</span></button>
+      </div>
+      <div id="quiz-explanation" class="hidden"></div>
+      <button id="btn-next-quiz" class="hidden">次の問題 →</button>
+    </div>
+  </div>
+
+  <!-- イントロクイズ -->
+  <div id="panel-intro" class="hidden">
+    <div id="intro-genres">
+      <button class="genre-btn selected" data-genre="random">🎲 ランダム</button>
+      <button class="genre-btn" data-genre="british-rock-60s-70s">🎸 60s-70s ブリティッシュロック</button>
+      <button class="genre-btn" data-genre="80s-pop">💿 80s ポップ</button>
+      <button class="genre-btn" data-genre="britpop-90s">🌟 90s ブリットポップ</button>
+      <button class="genre-btn" data-genre="2000s-plus">📻 2000s以降</button>
+      <button class="genre-btn" data-genre="classic-rock">🤘 クラシックロック</button>
+    </div>
+    <div id="intro-card">
+      <div id="youtube-player-container">
+        <div id="youtube-player"></div>
+        <div id="video-cover">
+          <span class="cover-icon">🎵</span>
+          <span class="cover-text">曲名・アーティストを当てよう</span>
+        </div>
+      </div>
+      <div id="intro-hint" class="hidden"></div>
+      <div id="intro-controls">
+        <button id="btn-play-again" class="hidden">▶ もう一度</button>
+        <button id="btn-show-answer" class="hidden">答えを見る</button>
+      </div>
+      <div id="intro-answer-form" class="hidden">
+        <input id="intro-user-answer" type="text" placeholder="曲名 / アーティスト名を入力..." autocomplete="off" spellcheck="false">
+        <button id="btn-submit-intro">送信</button>
+      </div>
+      <div id="intro-result" class="hidden"></div>
+      <button id="btn-next-intro" class="hidden">次の問題 →</button>
+    </div>
+  </div>
+
+  <div id="loading" class="hidden">読み込み中...</div>
+  <div id="error-msg" class="hidden"></div>
+
+  <section id="history-section">
+    <h3>直近の履歴</h3>
+    <div id="history-list"></div>
+  </section>
+
+</div>
+
+<div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <h2>API Key Settings</h2>
+    <label>
+      Groq API Key
+      <input id="input-groq-key" type="password" placeholder="gsk_..." autocomplete="off">
+    </label>
+    <label>
+      YouTube API Key
+      <input id="input-youtube-key" type="password" placeholder="AIza..." autocomplete="off">
+    </label>
+    <div class="modal-actions">
+      <button id="btn-save-keys">保存</button>
+      <button id="btn-close-settings">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG / STATE / STORAGE
+// ============================================================
+const CONFIG = {
+  groqKey: '',
+  youtubeKey: '',
+  model: 'llama-3.1-8b-instant'
+};
+CONFIG.load = function() {
+  try {
+    this.groqKey    = localStorage.getItem('pubquiz_groq_key')    || '';
+    this.youtubeKey = localStorage.getItem('pubquiz_youtube_key') || '';
+  } catch (e) {}
+};
+CONFIG.save = function() {
+  try {
+    localStorage.setItem('pubquiz_groq_key',    this.groqKey);
+    localStorage.setItem('pubquiz_youtube_key', this.youtubeKey);
+  } catch (e) {}
+};
+
+const STATE = {
+  scores: { correct: 0, total: 0, streak: 0 },
+  history: [],
+  currentMode: 'quiz',
+  currentQuiz: null,
+  currentIntro: null,
+  selectedCategory: 'random',
+  selectedGenre: 'random'
+};
+
+const STORAGE = {
+  KEYS: { SCORES: 'pubquiz_scores', HISTORY: 'pubquiz_history' },
+  save: function() {
+    try {
+      localStorage.setItem(this.KEYS.SCORES,  JSON.stringify(STATE.scores));
+      localStorage.setItem(this.KEYS.HISTORY, JSON.stringify(STATE.history));
+    } catch (e) {}
+  },
+  load: function() {
+    try {
+      const s = localStorage.getItem(this.KEYS.SCORES);
+      const h = localStorage.getItem(this.KEYS.HISTORY);
+      if (s) STATE.scores  = JSON.parse(s);
+      if (h) STATE.history = JSON.parse(h);
+    } catch (e) {}
+  },
+  resetScores: function() {
+    STATE.scores  = { correct: 0, total: 0, streak: 0 };
+    STATE.history = [];
+    try {
+      localStorage.removeItem(this.KEYS.SCORES);
+      localStorage.removeItem(this.KEYS.HISTORY);
+    } catch (e) {}
+  },
+  saveKeys: function(groqKey, youtubeKey) {
+    CONFIG.groqKey    = groqKey;
+    CONFIG.youtubeKey   = youtubeKey;
+    CONFIG.save();
+  }
+};
+
+function addToHistory(category, question, isCorrect) {
+  STATE.history.unshift({ category, question, isCorrect });
+  if (STATE.history.length > 10) STATE.history.pop();
+  STORAGE.save();
+}
+
+function updateScores(isCorrect) {
+  STATE.scores.total++;
+  if (isCorrect) { STATE.scores.correct++; STATE.scores.streak++; }
+  else            { STATE.scores.streak = 0; }
+  STORAGE.save();
+}
+
+// ============================================================
+// UI
+// ============================================================
+const UI = {
+  renderQuestion: function(data) {
+    document.getElementById('quiz-category-label').textContent = data.category || '';
+    document.getElementById('quiz-question').textContent = data.question;
+    const btns = document.querySelectorAll('.option-btn');
+    btns.forEach((btn, i) => {
+      btn.querySelector('.option-text').textContent = data.options[i];
+      btn.className = 'option-btn';
+      btn.disabled = false;
+    });
+    document.getElementById('quiz-card').classList.remove('correct', 'wrong');
+    document.getElementById('quiz-explanation').classList.add('hidden');
+    document.getElementById('btn-next-quiz').classList.add('hidden');
+    document.getElementById('error-msg').classList.add('hidden');
+  },
+
+  showResult: function(isCorrect, explanation) {
+    const card = document.getElementById('quiz-card');
+    const btns = document.querySelectorAll('.option-btn');
+    const correctIndex = STATE.currentQuiz ? STATE.currentQuiz.answer : -1;
+
+    btns.forEach((btn, i) => {
+      btn.disabled = true;
+      if (i === correctIndex) btn.classList.add('correct');
+    });
+
+    // Flash animation — force reflow to restart
+    card.classList.remove('correct', 'wrong');
+    void card.offsetWidth;
+    card.classList.add(isCorrect ? 'correct' : 'wrong');
+
+    const expEl = document.getElementById('quiz-explanation');
+    expEl.textContent = explanation;
+    expEl.classList.remove('hidden');
+
+    document.getElementById('btn-next-quiz').classList.remove('hidden');
+    UI.updateScoreBar();
+    UI.renderHistory();
+  },
+
+  updateScoreBar: function() {
+    document.getElementById('score-correct').textContent = STATE.scores.correct;
+    const rate = STATE.scores.total > 0
+      ? Math.round(STATE.scores.correct / STATE.scores.total * 100) + '%'
+      : '—';
+    document.getElementById('score-rate').textContent = rate;
+    document.getElementById('score-streak').textContent = STATE.scores.streak;
+  },
+
+  renderHistory: function() {
+    const container = document.getElementById('history-list');
+    if (STATE.history.length === 0) {
+      container.innerHTML = '<p style="color:var(--color-text-dim);font-size:0.85rem;">まだ回答履歴がありません。</p>';
+      return;
+    }
+    container.innerHTML = STATE.history.map(item => `
+      <div class="history-item">
+        <span class="history-badge ${item.isCorrect ? 'correct' : 'wrong'}">${item.isCorrect ? '✓' : '✗'}</span>
+        <span class="history-question">${item.question}</span>
+        <span class="history-category">${item.category}</span>
+      </div>
+    `).join('');
+  },
+
+  showLoading: function(show) {
+    document.getElementById('loading').classList.toggle('hidden', !show);
+  },
+
+  showError: function(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 5000);
+  }
+};
+
+// ============================================================
+// QUIZ
+// ============================================================
+const QUIZ = {
+  _categoryMap: {
+    random:    'any category (History, Sports, Music, Geography, Science, Film & TV, Royal Family, Culture)',
+    history:   'History',
+    sports:    'Sports',
+    music:     'Music',
+    geography: 'Geography',
+    science:   'Science',
+    'film-tv': 'Film & TV',
+    royals:    'British Royal Family',
+    culture:   'British Culture',
+  },
+
+  _validate: function(data) {
+    if (!data || typeof data !== 'object') return false;
+    if (typeof data.question !== 'string' || !data.question.trim()) return false;
+    if (!Array.isArray(data.options) || data.options.length !== 4) return false;
+    if (!data.options.every(o => typeof o === 'string')) return false;
+    if (typeof data.answer !== 'number' || data.answer < 0 || data.answer > 3) return false;
+    if (typeof data.explanation !== 'string' || !data.explanation.trim()) return false;
+    return true;
+  },
+
+  generate: async function() {
+    if (!CONFIG.groqKey) { UI.showError('Groq APIキーを設定してください。'); return; }
+    UI.showLoading(true);
+
+    const category = this._categoryMap[STATE.selectedCategory] || this._categoryMap['random'];
+    const prompt =
+      'You are a British pub quiz master. Generate a pub quiz question.\n' +
+      'Category: ' + category + '\n' +
+      'Respond with JSON only (no markdown):\n' +
+      '{"category":"...","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}\n' +
+      'The answer field is the index (0-3) of the correct option.';
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + CONFIG.groqKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ model: CONFIG.model, max_tokens: 512, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } }),
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const rawText = json?.choices?.[0]?.message?.content;
+      if (!rawText) throw new Error('Empty response');
+
+      let data;
+      try { data = JSON.parse(rawText); } catch (_) {
+        UI.showLoading(false);
+        UI.showError('問題の生成に失敗しました。再試行してください。');
+        return;
+      }
+      if (!this._validate(data)) {
+        UI.showLoading(false);
+        UI.showError('問題の生成に失敗しました。再試行してください。');
+        return;
+      }
+      STATE.currentQuiz = data;
+      UI.showLoading(false);
+      UI.renderQuestion(data);
+    } catch (err) {
+      console.error('[QUIZ.generate]', err);
+      UI.showLoading(false);
+      UI.showError('問題の生成に失敗しました。再試行してください。');
+    }
+  },
+
+  submitAnswer: function(selectedIndex) {
+    if (!STATE.currentQuiz) return;
+    const isCorrect = selectedIndex === STATE.currentQuiz.answer;
+    updateScores(isCorrect);
+    addToHistory(STATE.currentQuiz.category || STATE.selectedCategory, STATE.currentQuiz.question, isCorrect);
+    UI.showResult(isCorrect, STATE.currentQuiz.explanation);
+  },
+};
+
+// ============================================================
+// YOUTUBE / INTRO
+// ============================================================
+const GENRE_MAP = {
+  random:                'any popular genre (60s-70s British Rock, 80s Pop, 90s Britpop, 2000s+, Classic Rock)',
+  'british-rock-60s-70s': '60s-70s British Rock',
+  '80s-pop':             '80s Pop',
+  'britpop-90s':         '90s Britpop',
+  '2000s-plus':          '2000s and beyond',
+  'classic-rock':        'Classic Rock',
+};
+
+const YOUTUBE = {
+  _timer: null,
+
+  init: function() {},
+
+  search: async function(artist, title) {
+    try {
+      const q = encodeURIComponent(artist + ' ' + title + ' official');
+      const url = 'https://www.googleapis.com/youtube/v3/search?part=snippet&q=' + q + '&type=video&videoEmbeddable=true&maxResults=3&key=' + CONFIG.youtubeKey;
+      console.log('[YouTube] Searching:', artist, '-', title);
+      const res = await fetch(url);
+      const data = await res.json();
+      console.log('[YouTube] Response:', JSON.stringify(data).slice(0, 300));
+      if (!res.ok) {
+        const msg = data.error ? data.error.message : 'HTTP ' + res.status;
+        throw new Error(msg);
+      }
+      if (!data.items || data.items.length === 0) throw new Error('No results');
+      const videoId = data.items[0].id.videoId;
+      console.log('[YouTube] videoId:', videoId);
+      return videoId;
+    } catch (err) {
+      console.error('[YouTube] search failed:', err);
+      UI.showError('YouTube検索エラー: ' + err.message);
+      return null;
+    }
+  },
+
+  playFor: function(videoId, seconds) {
+    const container = document.getElementById('youtube-player-container');
+    let iframe = document.getElementById('yt-iframe');
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'yt-iframe';
+      iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture; compute-pressure';
+      iframe.allowFullscreen = true;
+      container.appendChild(iframe);
+    }
+    iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=1&controls=0&rel=0&modestbranding=1';
+
+    if (this._timer) clearTimeout(this._timer);
+    this._timer = setTimeout(function() {
+      iframe.src = 'https://www.youtube.com/embed/' + videoId + '?autoplay=0&controls=0&rel=0&modestbranding=1';
+    }, seconds * 1000);
+  },
+
+  replay: function() {
+    if (STATE.currentIntro && STATE.currentIntro.videoId) {
+      YOUTUBE.playFor(STATE.currentIntro.videoId, 10);
+    }
+  },
+};
+
+const INTRO = {
+  generate: async function() {
+    if (!CONFIG.groqKey) { UI.showError('Groq APIキーを設定してください。'); return; }
+    if (!CONFIG.youtubeKey)   { UI.showError('YouTube APIキーを設定してください。'); return; }
+    UI.showLoading(true);
+
+    try {
+      const genre = GENRE_MAP[STATE.selectedGenre] || GENRE_MAP['random'];
+      const prompt =
+        'Pick one famous song from ' + genre + ' that would appear in a British pub quiz.\n' +
+        'Respond with JSON only (no markdown):\n' +
+        '{"artist":"...","title":"...","year":1975,"hint":"...（日本語でイントロの特徴）"}';
+
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + CONFIG.groqKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ model: CONFIG.model, max_tokens: 512, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } }),
+      });
+      if (!res.ok) throw new Error('Groq API ' + res.status);
+      const json = await res.json();
+      const song = JSON.parse(json.choices[0].message.content.trim());
+      const { artist, title, year, hint } = song;
+
+      const videoId = await YOUTUBE.search(artist, title);
+      STATE.currentIntro = { artist, title, year, hint, videoId };
+      UI.showLoading(false);
+
+      if (!videoId) {
+        UI.showError('YouTube動画が見つかりませんでした。');
+      } else {
+        YOUTUBE.playFor(videoId, 10);
+      }
+
+      const elHint = document.getElementById('intro-hint');
+      elHint.textContent = hint;
+      elHint.classList.remove('hidden');
+      document.getElementById('intro-answer-form').classList.remove('hidden');
+      document.getElementById('btn-play-again').classList.remove('hidden');
+      document.getElementById('btn-show-answer').classList.remove('hidden');
+      document.getElementById('intro-result').classList.add('hidden');
+      document.getElementById('intro-result').className = 'hidden';
+      document.getElementById('btn-next-intro').classList.add('hidden');
+      document.getElementById('intro-user-answer').value = '';
+      document.getElementById('video-cover').classList.remove('hidden');
+    } catch (err) {
+      UI.showLoading(false);
+      console.error('INTRO.generate:', err);
+      UI.showError('曲の生成に失敗しました。もう一度お試しください。');
+    }
+  },
+
+  replay: function() { YOUTUBE.replay(); },
+
+  showAnswer: function() {
+    if (!STATE.currentIntro) return;
+    const { artist, title, year } = STATE.currentIntro;
+    const el = document.getElementById('intro-result');
+    el.className = '';
+    el.textContent = '正解: ' + artist + ' - ' + title + ' (' + year + ')';
+    el.classList.remove('hidden');
+    document.getElementById('video-cover').classList.add('hidden');
+  },
+
+  submitAnswer: async function(userAnswer) {
+    if (!STATE.currentIntro) return;
+    UI.showLoading(true);
+    try {
+      const { artist, title } = STATE.currentIntro;
+      const prompt =
+        'Correct answer: ' + artist + ' - ' + title + '\n' +
+        "User's answer: " + userAnswer + '\n' +
+        "Judge if the user's answer is correct (either song title or artist name is acceptable).\n" +
+        'Respond with JSON only (no markdown):\n' +
+        '{"correct":true,"explanation":"...（日本語、2〜3文）"}';
+
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + CONFIG.groqKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ model: CONFIG.model, max_tokens: 512, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' } }),
+      });
+      if (!res.ok) throw new Error('Groq API ' + res.status);
+      const json = await res.json();
+      const { correct, explanation } = JSON.parse(json.choices[0].message.content.trim());
+
+      UI.showLoading(false);
+
+      const el = document.getElementById('intro-result');
+      el.className = correct ? 'correct' : 'wrong';
+      el.innerHTML = '<p class="' + (correct ? 'correct-text' : 'wrong-text') + '">' + (correct ? '✓ 正解!' : '✗ 不正解') + '</p><p>' + explanation + '</p>';
+      el.classList.remove('hidden');
+      document.getElementById('btn-next-intro').classList.remove('hidden');
+      document.getElementById('video-cover').classList.add('hidden');
+
+      updateScores(correct);
+      addToHistory('イントロクイズ', artist + ' - ' + title, correct);
+      UI.updateScoreBar();
+      UI.renderHistory();
+    } catch (err) {
+      UI.showLoading(false);
+      console.error('INTRO.submitAnswer:', err);
+      UI.showError('回答の判定に失敗しました。もう一度お試しください。');
+    }
+  },
+};
+
+// ============================================================
+// Event Listeners
+// ============================================================
+function setupEventListeners() {
+  // Settings modal
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    document.getElementById('input-groq-key').value = CONFIG.groqKey;
+    document.getElementById('input-youtube-key').value   = CONFIG.youtubeKey;
+    document.getElementById('settings-modal').classList.remove('hidden');
+  });
+  document.getElementById('btn-close-settings').addEventListener('click', () => {
+    document.getElementById('settings-modal').classList.add('hidden');
+  });
+  document.getElementById('settings-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) document.getElementById('settings-modal').classList.add('hidden');
+  });
+  document.getElementById('btn-save-keys').addEventListener('click', () => {
+    const ak = document.getElementById('input-groq-key').value.trim();
+    const yk = document.getElementById('input-youtube-key').value.trim();
+    STORAGE.saveKeys(ak, yk);
+    document.getElementById('settings-modal').classList.add('hidden');
+    if (STATE.currentMode === 'quiz' && !STATE.currentQuiz) QUIZ.generate();
+  });
+
+  // Reset
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('スコアと履歴をリセットしますか？')) return;
+    STORAGE.resetScores();
+    UI.updateScoreBar();
+    UI.renderHistory();
+  });
+
+  // Mode tabs
+  document.getElementById('tab-quiz').addEventListener('click', () => {
+    if (STATE.currentMode === 'quiz') return;
+    STATE.currentMode = 'quiz';
+    document.getElementById('tab-quiz').classList.add('active');
+    document.getElementById('tab-intro').classList.remove('active');
+    document.getElementById('panel-quiz').classList.remove('hidden');
+    document.getElementById('panel-intro').classList.add('hidden');
+  });
+  document.getElementById('tab-intro').addEventListener('click', () => {
+    if (STATE.currentMode === 'intro') return;
+    STATE.currentMode = 'intro';
+    document.getElementById('tab-intro').classList.add('active');
+    document.getElementById('tab-quiz').classList.remove('active');
+    document.getElementById('panel-intro').classList.remove('hidden');
+    document.getElementById('panel-quiz').classList.add('hidden');
+    if (!STATE.currentIntro) INTRO.generate();
+  });
+
+  // Category buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      STATE.selectedCategory = btn.dataset.cat;
+      QUIZ.generate();
+    });
+  });
+
+  // Option buttons
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => QUIZ.submitAnswer(parseInt(btn.dataset.index)));
+  });
+
+  // Next quiz
+  document.getElementById('btn-next-quiz').addEventListener('click', () => QUIZ.generate());
+
+  // Genre buttons
+  document.querySelectorAll('.genre-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.genre-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      STATE.selectedGenre = btn.dataset.genre;
+      INTRO.generate();
+    });
+  });
+
+  // Intro controls
+  document.getElementById('btn-play-again').addEventListener('click',  () => INTRO.replay());
+  document.getElementById('btn-show-answer').addEventListener('click', () => INTRO.showAnswer());
+  document.getElementById('btn-submit-intro').addEventListener('click', () => {
+    const ans = document.getElementById('intro-user-answer').value.trim();
+    if (ans) INTRO.submitAnswer(ans);
+  });
+  document.getElementById('intro-user-answer').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      const ans = e.target.value.trim();
+      if (ans) INTRO.submitAnswer(ans);
+    }
+  });
+  document.getElementById('btn-next-intro').addEventListener('click', () => INTRO.generate());
+}
+
+// ============================================================
+// Init
+// ============================================================
+function init() {
+  STORAGE.load();
+  CONFIG.load();
+
+  UI.updateScoreBar();
+  UI.renderHistory();
+  setupEventListeners();
+  YOUTUBE.init();
+
+  if (!CONFIG.groqKey) {
+    document.getElementById('settings-modal').classList.remove('hidden');
+  } else {
+    QUIZ.generate();
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>
