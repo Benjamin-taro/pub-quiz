@@ -469,6 +469,7 @@ const STATE = {
   currentMode: 'quiz',
   currentQuiz: null,
   currentIntro: null,
+  recentIntros: [],
   selectedCategory: 'random',
   selectedGenre: 'random'
 };
@@ -752,8 +753,11 @@ const INTRO = {
 
     try {
       const genre = GENRE_MAP[STATE.selectedGenre] || GENRE_MAP['random'];
+      const avoidList = STATE.recentIntros.length > 0
+        ? '\nDo NOT pick any of these recently used songs: ' + STATE.recentIntros.map(s => s.artist + ' - ' + s.title).join(', ') + '.'
+        : '';
       const prompt =
-        'Pick one famous song from ' + genre + ' that would appear in a British pub quiz.\n' +
+        'Pick one famous song from ' + genre + ' that would appear in a British pub quiz.' + avoidList + '\n' +
         'Respond with JSON only (no markdown):\n' +
         '{"artist":"...","title":"...","year":1975,"hint":"...（日本語でイントロの特徴）"}';
 
@@ -772,6 +776,8 @@ const INTRO = {
 
       const videoId = await YOUTUBE.search(artist, title);
       STATE.currentIntro = { artist, title, year, hint, videoId };
+      STATE.recentIntros.push({ artist, title });
+      if (STATE.recentIntros.length > 8) STATE.recentIntros.shift();
       UI.showLoading(false);
 
       if (!videoId) {
