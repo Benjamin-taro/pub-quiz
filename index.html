@@ -760,7 +760,7 @@ const YOUTUBE = {
 
   replay: function() {
     if (STATE.currentIntro && STATE.currentIntro.videoId) {
-      YOUTUBE.playFor(STATE.currentIntro.videoId, 10);
+      YOUTUBE.playFor(STATE.currentIntro.videoId, 20);
     }
   },
 };
@@ -781,7 +781,7 @@ const INTRO = {
         (avoidList ? avoidList + '\n' : '') +
         'Requirements:\n' +
         '- The song must be well-known enough for a general British pub crowd\n' +
-        '- It must have a distinctive, recognizable intro within the first 5–10 seconds (strong opening riff, hook, or melody)\n' +
+        '- It must have a distinctive, recognizable intro within the first 20 seconds (strong opening riff, hook, or melody)\n' +
         '- Vary between iconic hits and slightly less obvious but still pub-worthy tracks — do not always pick the most obvious choice\n' +
         '- The hint must describe what makes the intro distinctive: mention specific instruments, tempo, mood, or opening notes — in Japanese, 1–2 sentences\n' +
         'Respond with JSON only (no markdown):\n' +
@@ -809,7 +809,7 @@ const INTRO = {
       if (!videoId) {
         UI.showError('YouTube動画が見つかりませんでした。');
       } else {
-        YOUTUBE.playFor(videoId, 10);
+        YOUTUBE.playFor(videoId, 20);
       }
 
       const elHint = document.getElementById('intro-hint');
