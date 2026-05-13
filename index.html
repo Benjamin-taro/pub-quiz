@@ -251,13 +251,13 @@ header > span:first-child {
 #video-cover .cover-icon { font-size: 3rem; animation: pulse 1.8s ease infinite; }
 #video-cover .cover-text { font-family: var(--font-heading); font-size: 1rem; color: var(--color-text-muted); letter-spacing: 0.06em; }
 #video-cover.hidden { display: none !important; }
-#intro-hint { background: var(--color-surface-2); border: 1px dashed var(--color-border-light); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 0.88rem; color: var(--color-text-muted); margin-bottom: 14px; }
-#intro-hint::before { content: '💡 '; }
 #intro-controls { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 #btn-play-again { flex: 1 1 120px; padding: 11px 24px; background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; }
 #btn-play-again:hover { background: var(--color-surface-3); border-color: var(--color-amber); box-shadow: 0 0 10px rgba(217,119,6,0.25); }
 #btn-show-answer { flex: 1 1 120px; padding: 11px 24px; background: var(--color-surface-3); color: var(--color-amber-light); border: 1px solid var(--color-amber); border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; }
 #btn-show-answer:hover { background: var(--color-amber); color: #1a1008; box-shadow: 0 0 12px rgba(217,119,6,0.4); }
+#btn-give-up { flex: 1 1 120px; padding: 11px 24px; background: transparent; color: var(--color-text-dim); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; font-weight: 700; }
+#btn-give-up:hover { background: var(--color-surface-2); color: var(--color-text-muted); border-color: var(--color-border-light); }
 #intro-answer-form { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 #intro-user-answer { flex: 1 1 180px; padding: 10px 14px; background: var(--color-surface-2); color: var(--color-text); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95rem; transition: border-color var(--transition-fast), box-shadow var(--transition-fast); }
 #intro-user-answer::placeholder { color: var(--color-text-dim); }
@@ -397,10 +397,10 @@ header > span:first-child {
           <span class="cover-text">曲名・アーティストを当てよう</span>
         </div>
       </div>
-      <div id="intro-hint" class="hidden"></div>
       <div id="intro-controls">
         <button id="btn-play-again" class="hidden">▶ もう一度</button>
         <button id="btn-show-answer" class="hidden">答えを見る</button>
+        <button id="btn-give-up" class="hidden">わからない</button>
       </div>
       <div id="intro-answer-form" class="hidden">
         <input id="intro-user-answer" type="text" placeholder="曲名 / アーティスト名を入力..." autocomplete="off" spellcheck="false">
@@ -760,7 +760,7 @@ const YOUTUBE = {
 
   replay: function() {
     if (STATE.currentIntro && STATE.currentIntro.videoId) {
-      YOUTUBE.playFor(STATE.currentIntro.videoId, 20);
+      YOUTUBE.playFor(STATE.currentIntro.videoId, 30);
     }
   },
 };
@@ -781,11 +781,10 @@ const INTRO = {
         (avoidList ? avoidList + '\n' : '') +
         'Requirements:\n' +
         '- The song must be well-known enough for a general British pub crowd\n' +
-        '- It must have a distinctive, recognizable intro within the first 20 seconds (strong opening riff, hook, or melody)\n' +
+        '- It must have a distinctive, recognizable intro within the first 30 seconds (strong opening riff, hook, or melody)\n' +
         '- Vary between iconic hits and slightly less obvious but still pub-worthy tracks — do not always pick the most obvious choice\n' +
-        '- The hint must describe what makes the intro distinctive: mention specific instruments, tempo, mood, or opening notes — in Japanese, 1–2 sentences\n' +
         'Respond with JSON only (no markdown):\n' +
-        '{"artist":"...","title":"...","year":1975,"hint":"..."}';
+        '{"artist":"...","title":"...","year":1975}';
 
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -798,10 +797,10 @@ const INTRO = {
       if (!res.ok) throw new Error('Groq API ' + res.status);
       const json = await res.json();
       const song = JSON.parse(json.choices[0].message.content.trim());
-      const { artist, title, year, hint } = song;
+      const { artist, title, year } = song;
 
       const videoId = await YOUTUBE.search(artist, title);
-      STATE.currentIntro = { artist, title, year, hint, videoId };
+      STATE.currentIntro = { artist, title, year, videoId };
       STATE.recentIntros.push({ artist, title });
       if (STATE.recentIntros.length > 8) STATE.recentIntros.shift();
       UI.showLoading(false);
@@ -809,15 +808,13 @@ const INTRO = {
       if (!videoId) {
         UI.showError('YouTube動画が見つかりませんでした。');
       } else {
-        YOUTUBE.playFor(videoId, 20);
+        YOUTUBE.playFor(videoId, 30);
       }
 
-      const elHint = document.getElementById('intro-hint');
-      elHint.textContent = hint;
-      elHint.classList.remove('hidden');
       document.getElementById('intro-answer-form').classList.remove('hidden');
       document.getElementById('btn-play-again').classList.remove('hidden');
       document.getElementById('btn-show-answer').classList.remove('hidden');
+      document.getElementById('btn-give-up').classList.remove('hidden');
       document.getElementById('intro-result').classList.add('hidden');
       document.getElementById('intro-result').className = 'hidden';
       document.getElementById('btn-next-intro').classList.add('hidden');
@@ -840,6 +837,14 @@ const INTRO = {
     el.textContent = '正解: ' + artist + ' - ' + title + ' (' + year + ')';
     el.classList.remove('hidden');
     document.getElementById('video-cover').classList.add('hidden');
+  },
+
+  giveUp: function() {
+    if (!STATE.currentIntro) return;
+    this.showAnswer();
+    document.getElementById('intro-answer-form').classList.add('hidden');
+    document.getElementById('btn-give-up').classList.add('hidden');
+    document.getElementById('btn-next-intro').classList.remove('hidden');
   },
 
   submitAnswer: async function(userAnswer) {
@@ -982,6 +987,7 @@ function setupEventListeners() {
   // Intro controls
   document.getElementById('btn-play-again').addEventListener('click',  () => INTRO.replay());
   document.getElementById('btn-show-answer').addEventListener('click', () => INTRO.showAnswer());
+  document.getElementById('btn-give-up').addEventListener('click',     () => INTRO.giveUp());
   document.getElementById('btn-submit-intro').addEventListener('click', () => {
     const ans = document.getElementById('intro-user-answer').value.trim();
     if (ans) INTRO.submitAnswer(ans);
