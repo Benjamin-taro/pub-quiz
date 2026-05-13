@@ -470,6 +470,7 @@ const STATE = {
   currentQuiz: null,
   currentIntro: null,
   recentIntros: [],
+  recentQuizzes: [],
   selectedCategory: 'random',
   selectedGenre: 'random'
 };
@@ -505,9 +506,9 @@ const STORAGE = {
   }
 };
 
-function addToHistory(category, question, isCorrect) {
-  STATE.history.unshift({ category, question, isCorrect });
-  if (STATE.history.length > 10) STATE.history.pop();
+function addToHistory(entry) {
+  STATE.history.unshift(entry);
+  if (STATE.history.length > 200) STATE.history.pop();
   STORAGE.save();
 }
 
@@ -576,7 +577,7 @@ const UI = {
       container.innerHTML = '<p style="color:var(--color-text-dim);font-size:0.85rem;">まだ回答履歴がありません。</p>';
       return;
     }
-    container.innerHTML = STATE.history.map(item => `
+    container.innerHTML = STATE.history.slice(0, 10).map(item => `
       <div class="history-item">
         <span class="history-badge ${item.isCorrect ? 'correct' : 'wrong'}">${item.isCorrect ? '✓' : '✗'}</span>
         <span class="history-question">${item.question}</span>
@@ -628,9 +629,12 @@ const QUIZ = {
     UI.showLoading(true);
 
     const category = this._categoryMap[STATE.selectedCategory] || this._categoryMap['random'];
+    const avoidList = STATE.recentQuizzes.length > 0
+      ? '\nDo NOT repeat any of these recent questions: ' + STATE.recentQuizzes.join(' | ')
+      : '';
     const prompt =
       'You are a British pub quiz master. Generate a pub quiz question.\n' +
-      'Category: ' + category + '\n' +
+      'Category: ' + category + avoidList + '\n' +
       'Respond with JSON only (no markdown):\n' +
       '{"category":"...","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}\n' +
       'The answer field is the index (0-3) of the correct option.';
@@ -661,6 +665,8 @@ const QUIZ = {
         return;
       }
       STATE.currentQuiz = data;
+      STATE.recentQuizzes.push(data.question);
+      if (STATE.recentQuizzes.length > 10) STATE.recentQuizzes.shift();
       UI.showLoading(false);
       UI.renderQuestion(data);
     } catch (err) {
@@ -674,7 +680,15 @@ const QUIZ = {
     if (!STATE.currentQuiz) return;
     const isCorrect = selectedIndex === STATE.currentQuiz.answer;
     updateScores(isCorrect);
-    addToHistory(STATE.currentQuiz.category || STATE.selectedCategory, STATE.currentQuiz.question, isCorrect);
+    addToHistory({
+      category: STATE.currentQuiz.category || STATE.selectedCategory,
+      question: STATE.currentQuiz.question,
+      options: STATE.currentQuiz.options,
+      answer: STATE.currentQuiz.answer,
+      explanation: STATE.currentQuiz.explanation,
+      isCorrect,
+      timestamp: Date.now()
+    });
     UI.showResult(isCorrect, STATE.currentQuiz.explanation);
   },
 };
@@ -850,7 +864,14 @@ const INTRO = {
       document.getElementById('video-cover').classList.add('hidden');
 
       updateScores(correct);
-      addToHistory('イントロクイズ', artist + ' - ' + title, correct);
+      addToHistory({
+        category: 'イントロクイズ',
+        question: artist + ' - ' + title,
+        artist,
+        title,
+        isCorrect: correct,
+        timestamp: Date.now()
+      });
       UI.updateScoreBar();
       UI.renderHistory();
     } catch (err) {
