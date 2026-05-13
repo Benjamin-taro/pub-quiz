@@ -633,11 +633,17 @@ const QUIZ = {
       ? '\nDo NOT repeat any of these recent questions: ' + STATE.recentQuizzes.join(' | ')
       : '';
     const prompt =
-      'You are a British pub quiz master. Generate a pub quiz question.\n' +
-      'Category: ' + category + avoidList + '\n' +
-      'Respond with JSON only (no markdown):\n' +
-      '{"category":"...","question":"...","options":["A","B","C","D"],"answer":0,"explanation":"..."}\n' +
-      'The answer field is the index (0-3) of the correct option.';
+      'You are hosting a British pub quiz night. Generate one authentic pub quiz question.\n' +
+      'Category: ' + category + '\n' +
+      (avoidList ? avoidList + '\n' : '') +
+      'Guidelines:\n' +
+      '- Write in the style of a real British pub quiz: specific, factual, and unambiguous\n' +
+      '- Wrong options must be plausible — things a non-expert might genuinely confuse with the correct answer (similar names, dates, or related facts)\n' +
+      '- Avoid trick questions or answers so obscure only a specialist would know\n' +
+      '- The explanation should confirm the correct answer and include one interesting supporting fact\n' +
+      'Respond with JSON only (no markdown, no code block):\n' +
+      '{"category":"...","question":"...","options":["...","...","...","..."],"answer":0,"explanation":"..."}\n' +
+      'answer is the 0-based index of the correct option.';
 
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -771,9 +777,15 @@ const INTRO = {
         ? '\nDo NOT pick any of these recently used songs: ' + STATE.recentIntros.map(s => s.artist + ' - ' + s.title).join(', ') + '.'
         : '';
       const prompt =
-        'Pick one famous song from ' + genre + ' that would appear in a British pub quiz.' + avoidList + '\n' +
+        'You are a British pub quiz host running a music round. Pick one song from ' + genre + ' for an intro quiz.\n' +
+        (avoidList ? avoidList + '\n' : '') +
+        'Requirements:\n' +
+        '- The song must be well-known enough for a general British pub crowd\n' +
+        '- It must have a distinctive, recognizable intro within the first 5–10 seconds (strong opening riff, hook, or melody)\n' +
+        '- Vary between iconic hits and slightly less obvious but still pub-worthy tracks — do not always pick the most obvious choice\n' +
+        '- The hint must describe what makes the intro distinctive: mention specific instruments, tempo, mood, or opening notes — in Japanese, 1–2 sentences\n' +
         'Respond with JSON only (no markdown):\n' +
-        '{"artist":"...","title":"...","year":1975,"hint":"...（日本語でイントロの特徴）"}';
+        '{"artist":"...","title":"...","year":1975,"hint":"..."}';
 
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -836,11 +848,17 @@ const INTRO = {
     try {
       const { artist, title } = STATE.currentIntro;
       const prompt =
+        'You are judging a British pub quiz answer for the music round.\n' +
         'Correct answer: ' + artist + ' - ' + title + '\n' +
-        "User's answer: " + userAnswer + '\n' +
-        "Judge if the user's answer is correct (either song title or artist name is acceptable).\n" +
+        "Player's answer: " + userAnswer + '\n' +
+        'Marking rules (be a generous but fair pub quiz host):\n' +
+        '- Accept if either the artist name OR the song title is recognizably correct\n' +
+        '- Accept reasonable spelling mistakes and common abbreviations\n' +
+        '- Accept Japanese katakana or transliteration equivalents\n' +
+        '- Accept a partial artist name if unambiguous (e.g. "Bowie" for "David Bowie")\n' +
+        '- Do NOT accept vague, off-topic, or completely wrong answers\n' +
         'Respond with JSON only (no markdown):\n' +
-        '{"correct":true,"explanation":"...（日本語、2〜3文）"}';
+        '{"correct":true,"explanation":"...（日本語、2〜3文。正解の確認＋曲またはアーティストの豆知識）"}';
 
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
